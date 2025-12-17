@@ -14,7 +14,12 @@
     "firebase": "^10.8.0",
     "lucide-react": "^0.487.0",
     "clsx": "latest",
-    "tailwind-merge": "latest"
+    "tailwind-merge": "latest",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-slot": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "vaul": "^1.1.2",
+    "sonner": "^2.0.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react-swc": "^3.5.0",
