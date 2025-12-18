@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, UserCircle } from "lucide-react";
+import { UserCircle } from "lucide-react";
 import { BottomNav } from "./components/BottomNav";
 import { ExchangeRate } from "./components/ExchangeRate";
 import { Itinerary, ItineraryItemData } from "./components/Itinerary";
@@ -28,11 +28,11 @@ export default function App() {
   const [recommendationItems, setRecommendationItems] = useState<RecommendationItemData[]>([]);
 
   useEffect(() => {
-    const unsubscribe = listenToCloud((cloudData) => {
-      if (cloudData.members) setMembers(cloudData.members);
-      if (cloudData.itineraryItems) setItineraryItems(cloudData.itineraryItems);
-      if (cloudData.ticketItems) setTicketItems(cloudData.ticketItems);
-      if (cloudData.recommendationItems) setRecommendationItems(cloudData.recommendationItems);
+    const unsubscribe = listenToCloud((data) => {
+      if (data.members) setMembers(data.members);
+      if (data.itineraryItems) setItineraryItems(data.itineraryItems);
+      if (data.ticketItems) setTicketItems(data.ticketItems);
+      if (data.recommendationItems) setRecommendationItems(data.recommendationItems);
     });
     return () => unsubscribe();
   }, []);
@@ -48,72 +48,74 @@ export default function App() {
     return future.length > 0 ? future.slice(0, 5) : sorted.slice(-5);
   };
 
-  const syncAndSetMembers = (d: any) => { setMembers(d); saveToCloud({ members: d }); };
-  const syncAndSetItinerary = (d: any) => { setItineraryItems(d); saveToCloud({ itineraryItems: d }); };
-  const syncAndSetTickets = (d: any) => { setTicketItems(d); saveToCloud({ ticketItems: d }); };
-  const syncAndSetRecommendations = (d: any) => { setRecommendationItems(d); saveToCloud({ recommendationItems: d }); };
+  const sync = (payload: any) => saveToCloud(payload);
 
-  const handleItineraryUpdate = (updatedItem: ItineraryItemData) => syncAndSetItinerary(itineraryItems.map(item => item.id === updatedItem.id ? updatedItem : item));
-  const handleItineraryAdd = (newItem: ItineraryItemData) => syncAndSetItinerary([...itineraryItems, newItem]);
-  const handleItineraryDelete = (id: string) => syncAndSetItinerary(itineraryItems.filter(item => item.id !== id));
-  
-  const handleTicketUpdate = (updatedItem: TicketItemData) => syncAndSetTickets(ticketItems.map(item => item.id === updatedItem.id ? updatedItem : item));
-  const handleTicketAdd = (newItem: TicketItemData) => syncAndSetTickets([...ticketItems, newItem]);
+  const handleItineraryUpdate = (item: ItineraryItemData) => {
+    const next = itineraryItems.map(i => i.id === item.id ? item : i);
+    setItineraryItems(next); sync({ itineraryItems: next });
+  };
+  const handleItineraryAdd = (item: ItineraryItemData) => {
+    const next = [...itineraryItems, item];
+    setItineraryItems(next); sync({ itineraryItems: next });
+  };
+  const handleItineraryDelete = (id: string) => {
+    const next = itineraryItems.filter(i => i.id !== id);
+    setItineraryItems(next); sync({ itineraryItems: next });
+  };
 
-  const handleRecommendationUpdate = (updatedItem: RecommendationItemData) => syncAndSetRecommendations(recommendationItems.map(item => item.id === updatedItem.id ? updatedItem : item));
-  const handleRecommendationAdd = (newItem: RecommendationItemData) => syncAndSetRecommendations([...recommendationItems, newItem]);
+  const handleTicketUpdate = (item: TicketItemData) => {
+    const next = ticketItems.map(i => i.id === item.id ? item : i);
+    setTicketItems(next); sync({ ticketItems: next });
+  };
+  const handleTicketAdd = (item: TicketItemData) => {
+    const next = [...ticketItems, item];
+    setTicketItems(next); sync({ ticketItems: next });
+  };
 
-  const totalExpenses = itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0);
+  const handleRecUpdate = (item: RecommendationItemData) => {
+    const next = recommendationItems.map(i => i.id === item.id ? item : i);
+    setRecommendationItems(next); sync({ recommendationItems: next });
+  };
+  const handleRecAdd = (item: RecommendationItemData) => {
+    const next = [...recommendationItems, item];
+    setRecommendationItems(next); sync({ recommendationItems: next });
+  };
+
+  const totalExp = itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0);
 
   const renderContent = () => {
-    // 確保所有視圖都被保留
-    if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} members={members.map(m=>m.name)} />;
-    if (currentView === 'expenses') return <ExpenseSplitter items={itineraryItems} onBack={() => setCurrentView('home')} members={members.map(m=>m.name)} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} rates={EXCHANGE_RATES} />;
+    const mNames = members.map(m => m.name);
+    if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} members={mNames} />;
+    if (currentView === 'expenses') return <ExpenseSplitter items={itineraryItems} onBack={() => setCurrentView('home')} members={mNames} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} rates={EXCHANGE_RATES} />;
     if (currentView === 'all-tickets') return <AllTickets items={ticketItems} onBack={() => setCurrentView('home')} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} members={members} />;
-    if (currentView === 'all-recommendations') return <AllRecommendations items={recommendationItems} onBack={() => setCurrentView('home')} onUpdate={handleRecommendationUpdate} onAdd={handleRecommendationAdd} />;
+    if (currentView === 'all-recommendations') return <AllRecommendations items={recommendationItems} onBack={() => setCurrentView('home')} onUpdate={handleRecUpdate} onAdd={handleRecAdd} />;
 
     return (
-      <div className="min-h-screen bg-gray-50/50 pb-24 font-sans text-gray-900">
-        <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 z-40 px-4 py-3 flex items-center justify-between">
+      <div className="min-h-screen bg-gray-50/50 pb-32">
+        <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b z-30 px-4 py-3 flex justify-between items-center">
           <h1 className="text-xl font-bold">KHH2PUS</h1>
-          <button onClick={() => setIsProfileOpen(true)} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center overflow-hidden">
-            <UserCircle size={20} />
-          </button>
+          <button onClick={() => setIsProfileOpen(true)} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center"><UserCircle size={20} /></button>
         </header>
         <main className="max-w-md mx-auto py-6 space-y-8">
           <ExchangeRate rates={EXCHANGE_RATES} />
-          
-          <Itinerary 
-            items={getUpcomingItems()} 
-            onUpdate={handleItineraryUpdate} 
-            onAdd={handleItineraryAdd} 
-            onDelete={handleItineraryDelete}
-            onViewAll={() => setCurrentView('all-itineraries')} 
-            members={members.map(m=>m.name)} 
-          />
-
+          <Itinerary items={getUpcomingItems()} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} onViewAll={() => setCurrentView('all-itineraries')} members={mNames} />
           <TicketList items={ticketItems} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} onViewAll={() => setCurrentView('all-tickets')} />
-          
           <RecommendationSection title="美食清單" items={recommendationItems.filter(i=>i.category==='food').slice(0,2)} onViewAll={() => setCurrentView('all-recommendations')} />
-          <RecommendationSection title="購物清單" items={recommendationItems.filter(i=>i.category==='shopping').slice(0,2)} onViewAll={() => setCurrentView('all-recommendations')} />
-
-          <div onClick={() => setCurrentView('expenses')} className="cursor-pointer">
-             <Dashboard totalExpenses={totalExpenses} currency="TWD" />
-          </div>
+          <div onClick={() => setCurrentView('expenses')} className="px-4"><Dashboard totalExpenses={totalExp} currency="TWD" /></div>
         </main>
       </div>
     );
   };
 
   return (
-    <>
+    <div className="relative overflow-x-hidden">
       {renderContent()}
       <ProfileSettings isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} members={members} 
-        onUpdateMember={(id, name, avatar) => syncAndSetMembers(members.map(m => m.id === id ? { ...m, name, avatar } : m))}
-        onAddMember={(name) => syncAndSetMembers([...members, { id: Math.random().toString(36).substr(2, 9), name }])}
-        onRemoveMember={(id) => syncAndSetMembers(members.filter(m => m.id !== id))}
+        onUpdateMember={(id, name, avatar) => { const next = members.map(m => m.id === id ? { ...m, name, avatar } : m); setMembers(next); sync({ members: next }); }}
+        onAddMember={(name) => { const next = [...members, { id: Math.random().toString(36).substr(2, 9), name }]; setMembers(next); sync({ members: next }); }}
+        onRemoveMember={(id) => { const next = members.filter(m => m.id !== id); setMembers(next); sync({ members: next }); }}
       />
-      <BottomNav currentTab={currentView} onTabChange={(tab) => setCurrentView(tab)} />
-    </>
+      <BottomNav currentTab={currentView} onTabChange={(tab: any) => setCurrentView(tab)} />
+    </div>
   );
 }
