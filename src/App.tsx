@@ -37,62 +37,52 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  const getUpcomingItems = () => {
-    if (itineraryItems.length === 0) return [];
-    const now = new Date();
-    const sorted = [...itineraryItems].sort((a, b) => 
-      new Date(`${a.date} ${a.time.split(' - ')[0]}`).getTime() - 
-      new Date(`${b.date} ${b.time.split(' - ')[0]}`).getTime()
-    );
-    const future = sorted.filter(item => new Date(`${item.date} ${item.time.split(' - ')[1] || '23:59'}`) >= now);
-    return future.length > 0 ? future.slice(0, 5) : sorted.slice(-5);
-  };
+  const sync = (payload: any) => saveToCloud(payload);
 
   const handleItineraryUpdate = (item: ItineraryItemData) => {
     const next = itineraryItems.map(i => i.id === item.id ? item : i);
-    setItineraryItems(next); saveToCloud({ itineraryItems: next });
+    setItineraryItems(next); sync({ itineraryItems: next });
   };
   const handleItineraryAdd = (item: ItineraryItemData) => {
     const next = [...itineraryItems, item];
-    setItineraryItems(next); saveToCloud({ itineraryItems: next });
+    setItineraryItems(next); sync({ itineraryItems: next });
   };
   const handleItineraryDelete = (id: string) => {
     const next = itineraryItems.filter(i => i.id !== id);
-    setItineraryItems(next); saveToCloud({ itineraryItems: next });
+    setItineraryItems(next); sync({ itineraryItems: next });
   };
 
   const renderContent = () => {
     const mNames = members.map(m => m.name);
     if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} members={mNames} />;
     if (currentView === 'expenses') return <ExpenseSplitter items={itineraryItems} onBack={() => setCurrentView('home')} members={mNames} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} rates={EXCHANGE_RATES} />;
+    if (currentView === 'all-tickets') return <AllTickets items={ticketItems} onBack={() => setCurrentView('home')} onUpdate={(i:any)=>sync({ticketItems: ticketItems.map(t=>t.id===i.id?i:t)})} onAdd={(i:any)=>sync({ticketItems:[...ticketItems,i]})} members={members} />;
     
     return (
-      <div className="min-h-screen bg-gray-50/50 pb-32 overflow-x-hidden">
-        <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b z-20 px-4 py-3 flex justify-between items-center">
+      <div className="min-h-screen bg-gray-50 pb-24">
+        <header className="p-4 flex justify-between items-center bg-white border-b">
           <h1 className="text-xl font-bold">KHH2PUS</h1>
-          <button onClick={() => setIsProfileOpen(true)} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center"><UserCircle size={20} /></button>
+          <button onClick={() => setIsProfileOpen(true)}><UserCircle size={28} /></button>
         </header>
-        <main className="max-w-md mx-auto py-6 space-y-8 relative z-10">
+        <main className="p-4 space-y-6">
           <ExchangeRate rates={EXCHANGE_RATES} />
-          <Itinerary items={getUpcomingItems()} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} onViewAll={() => setCurrentView('all-itineraries')} members={mNames} />
-          <TicketList items={ticketItems} onUpdate={(i)=>saveToCloud({ticketItems: ticketItems.map(t=>t.id===i.id?i:t)})} onAdd={(i)=>saveToCloud({ticketItems:[...ticketItems,i]})} onViewAll={() => setCurrentView('all-tickets')} />
-          <div onClick={() => setCurrentView('expenses')} className="px-4 relative z-10">
-             <Dashboard totalExpenses={itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0)} currency="TWD" />
-          </div>
+          <Itinerary items={itineraryItems.slice(0, 3)} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} onViewAll={() => setCurrentView('all-itineraries')} members={mNames} />
+          <TicketList items={ticketItems} onUpdate={()=>{}} onAdd={()=>{}} onViewAll={() => setCurrentView('all-tickets')} />
+          <Dashboard totalExpenses={itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0)} currency="TWD" />
         </main>
       </div>
     );
   };
 
   return (
-    <div className="relative">
+    <>
       {renderContent()}
       <ProfileSettings isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} members={members} 
-        onUpdateMember={(id, name) => { const n = members.map(m=>m.id===id?{...m,name}:m); setMembers(n); saveToCloud({members:n}); }}
-        onAddMember={(name) => { const n = [...members,{id:Math.random().toString(36).substr(2,9),name}]; setMembers(n); saveToCloud({members:n}); }}
-        onRemoveMember={(id) => { const n = members.filter(m=>m.id!==id); setMembers(n); saveToCloud({members:n}); }}
+        onUpdateMember={(id, name) => { const n = members.map(m=>m.id===id?{...m,name}:m); setMembers(n); sync({members:n}); }}
+        onAddMember={(name) => { const n = [...members,{id:Math.random().toString(36).substr(2,9),name}]; setMembers(n); sync({members:n}); }}
+        onRemoveMember={(id) => { const n = members.filter(m=>m.id!==id); setMembers(n); sync({members:n}); }}
       />
       <BottomNav currentTab={currentView} onTabChange={(tab: any) => setCurrentView(tab)} />
-    </div>
+    </>
   );
 }
