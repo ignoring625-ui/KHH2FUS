@@ -48,72 +48,49 @@ export default function App() {
     return future.length > 0 ? future.slice(0, 5) : sorted.slice(-5);
   };
 
-  const sync = (payload: any) => saveToCloud(payload);
-
   const handleItineraryUpdate = (item: ItineraryItemData) => {
     const next = itineraryItems.map(i => i.id === item.id ? item : i);
-    setItineraryItems(next); sync({ itineraryItems: next });
+    setItineraryItems(next); saveToCloud({ itineraryItems: next });
   };
   const handleItineraryAdd = (item: ItineraryItemData) => {
     const next = [...itineraryItems, item];
-    setItineraryItems(next); sync({ itineraryItems: next });
+    setItineraryItems(next); saveToCloud({ itineraryItems: next });
   };
   const handleItineraryDelete = (id: string) => {
     const next = itineraryItems.filter(i => i.id !== id);
-    setItineraryItems(next); sync({ itineraryItems: next });
+    setItineraryItems(next); saveToCloud({ itineraryItems: next });
   };
-
-  const handleTicketUpdate = (item: TicketItemData) => {
-    const next = ticketItems.map(i => i.id === item.id ? item : i);
-    setTicketItems(next); sync({ ticketItems: next });
-  };
-  const handleTicketAdd = (item: TicketItemData) => {
-    const next = [...ticketItems, item];
-    setTicketItems(next); sync({ ticketItems: next });
-  };
-
-  const handleRecUpdate = (item: RecommendationItemData) => {
-    const next = recommendationItems.map(i => i.id === item.id ? item : i);
-    setRecommendationItems(next); sync({ recommendationItems: next });
-  };
-  const handleRecAdd = (item: RecommendationItemData) => {
-    const next = [...recommendationItems, item];
-    setRecommendationItems(next); sync({ recommendationItems: next });
-  };
-
-  const totalExp = itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0);
 
   const renderContent = () => {
     const mNames = members.map(m => m.name);
     if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} members={mNames} />;
     if (currentView === 'expenses') return <ExpenseSplitter items={itineraryItems} onBack={() => setCurrentView('home')} members={mNames} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} rates={EXCHANGE_RATES} />;
-    if (currentView === 'all-tickets') return <AllTickets items={ticketItems} onBack={() => setCurrentView('home')} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} members={members} />;
-    if (currentView === 'all-recommendations') return <AllRecommendations items={recommendationItems} onBack={() => setCurrentView('home')} onUpdate={handleRecUpdate} onAdd={handleRecAdd} />;
-
+    
     return (
-      <div className="min-h-screen bg-gray-50/50 pb-32">
-        <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b z-30 px-4 py-3 flex justify-between items-center">
+      <div className="min-h-screen bg-gray-50/50 pb-32 overflow-x-hidden">
+        <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b z-20 px-4 py-3 flex justify-between items-center">
           <h1 className="text-xl font-bold">KHH2PUS</h1>
           <button onClick={() => setIsProfileOpen(true)} className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center"><UserCircle size={20} /></button>
         </header>
-        <main className="max-w-md mx-auto py-6 space-y-8">
+        <main className="max-w-md mx-auto py-6 space-y-8 relative z-10">
           <ExchangeRate rates={EXCHANGE_RATES} />
           <Itinerary items={getUpcomingItems()} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} onViewAll={() => setCurrentView('all-itineraries')} members={mNames} />
-          <TicketList items={ticketItems} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} onViewAll={() => setCurrentView('all-tickets')} />
-          <RecommendationSection title="美食清單" items={recommendationItems.filter(i=>i.category==='food').slice(0,2)} onViewAll={() => setCurrentView('all-recommendations')} />
-          <div onClick={() => setCurrentView('expenses')} className="px-4"><Dashboard totalExpenses={totalExp} currency="TWD" /></div>
+          <TicketList items={ticketItems} onUpdate={(i)=>saveToCloud({ticketItems: ticketItems.map(t=>t.id===i.id?i:t)})} onAdd={(i)=>saveToCloud({ticketItems:[...ticketItems,i]})} onViewAll={() => setCurrentView('all-tickets')} />
+          <div onClick={() => setCurrentView('expenses')} className="px-4 relative z-10">
+             <Dashboard totalExpenses={itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0)} currency="TWD" />
+          </div>
         </main>
       </div>
     );
   };
 
   return (
-    <div className="relative overflow-x-hidden">
+    <div className="relative">
       {renderContent()}
       <ProfileSettings isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} members={members} 
-        onUpdateMember={(id, name, avatar) => { const next = members.map(m => m.id === id ? { ...m, name, avatar } : m); setMembers(next); sync({ members: next }); }}
-        onAddMember={(name) => { const next = [...members, { id: Math.random().toString(36).substr(2, 9), name }]; setMembers(next); sync({ members: next }); }}
-        onRemoveMember={(id) => { const next = members.filter(m => m.id !== id); setMembers(next); sync({ members: next }); }}
+        onUpdateMember={(id, name) => { const n = members.map(m=>m.id===id?{...m,name}:m); setMembers(n); saveToCloud({members:n}); }}
+        onAddMember={(name) => { const n = [...members,{id:Math.random().toString(36).substr(2,9),name}]; setMembers(n); saveToCloud({members:n}); }}
+        onRemoveMember={(id) => { const n = members.filter(m=>m.id!==id); setMembers(n); saveToCloud({members:n}); }}
       />
       <BottomNav currentTab={currentView} onTabChange={(tab: any) => setCurrentView(tab)} />
     </div>
