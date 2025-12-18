@@ -109,7 +109,7 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
     <div className="space-y-4">
       <div className="px-4 flex items-end justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">今日行程</h2>
+          <h2 className="text-lg font-bold text-gray-900">最近行程</h2>
           <p className="text-xs text-gray-500 mt-1">{items[0]?.date || "2026/03/06"} (星期五) 12:30</p>
         </div>
         <div className="flex gap-2">
