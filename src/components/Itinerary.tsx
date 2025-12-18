@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, RefreshCw, Clock, StickyNote, Wallet, Navigation, Plus, Save, X, Users, Check, Camera, ArrowLeft } from "lucide-react";
+import { MapPin, RefreshCw, Clock, StickyNote, Wallet, Navigation, Plus, Save, X, Users, Check, Camera, ArrowLeft, Trash2 } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -35,11 +35,12 @@ interface ItineraryProps {
   items: ItineraryItemData[];
   onUpdate?: (item: ItineraryItemData) => void;
   onAdd?: (item: ItineraryItemData) => void;
+  onDelete?: (id: string) => void;
   onViewAll?: () => void;
   members?: string[];
 }
 
-export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我", "成員A"] }: ItineraryProps) {
+export function Itinerary({ items, onUpdate, onAdd, onDelete, onViewAll, members = ["我", "成員A"] }: ItineraryProps) {
   const [editingItem, setEditingItem] = useState<ItineraryItemData | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newItem, setNewItem] = useState<Partial<ItineraryItemData>>({});
@@ -92,80 +93,79 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
     }
   };
 
-  // 渲染編輯/新增的表單內容
   const renderForm = (data: Partial<ItineraryItemData>, setData: any, onSave: () => void, onCancel: () => void, title: string) => (
-    <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in slide-in-from-bottom duration-300">
-      {/* 頂部導覽列 */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-in fade-in slide-in-from-bottom duration-300 overflow-hidden">
+      {/* 頂部固定導覽 */}
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
         <button onClick={onCancel} className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
           <ArrowLeft size={20} />
         </button>
         <h3 className="font-bold text-lg">{title}</h3>
-        <button onClick={onSave} className="text-blue-600 font-bold px-2">儲存</button>
+        <button onClick={onSave} className="text-blue-600 font-bold px-2 active:opacity-50">儲存</button>
       </div>
 
-      {/* 滾動內容區 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-10">
-        {/* 圖片上傳 */}
+      {/* 滾動表單內容 */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+        {/* 封面照片 */}
         <div className="relative w-full h-48 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2">
           {data.image ? (
             <img src={data.image} className="w-full h-full object-cover" />
           ) : (
             <>
               <Camera className="text-gray-400" size={24} />
-              <span className="text-xs text-gray-400 font-medium">上傳封面照片</span>
+              <span className="text-xs text-gray-400 font-medium">點擊上傳封面照片</span>
             </>
           )}
           <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, title.includes('新增') ? 'add' : 'edit')} />
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <Label>行程標題</Label>
-            <Input value={data.title || ""} onChange={e => setData({...data, title: e.target.value})} placeholder="例如：釜山塔看夕陽" />
+          <div className="space-y-1.5">
+            <Label className="text-gray-500 text-xs">行程標題</Label>
+            <Input className="h-12 rounded-xl bg-gray-50 border-none" value={data.title || ""} onChange={e => setData({...data, title: e.target.value})} placeholder="例如：釜山大橋夜景" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>日期</Label>
-              <Input type="date" value={data.date || ""} onChange={e => setData({...data, date: e.target.value})} />
+            <div className="space-y-1.5">
+              <Label className="text-gray-500 text-xs">日期</Label>
+              <Input className="h-12 rounded-xl bg-gray-50 border-none" type="date" value={data.date || ""} onChange={e => setData({...data, date: e.target.value})} />
             </div>
-            <div className="space-y-1">
-              <Label>時間</Label>
-              <Input placeholder="14:00" value={data.time || ""} onChange={e => setData({...data, time: e.target.value})} />
+            <div className="space-y-1.5">
+              <Label className="text-gray-500 text-xs">時間</Label>
+              <Input className="h-12 rounded-xl bg-gray-50 border-none" placeholder="14:00" value={data.time || ""} onChange={e => setData({...data, time: e.target.value})} />
             </div>
           </div>
-          <div className="space-y-1">
-            <Label>地點</Label>
-            <Input placeholder="搜尋地點" value={data.location || ""} onChange={e => setData({...data, location: e.target.value})} />
+          <div className="space-y-1.5">
+            <Label className="text-gray-500 text-xs">地點</Label>
+            <Input className="h-12 rounded-xl bg-gray-50 border-none" placeholder="搜尋或輸入地點" value={data.location || ""} onChange={e => setData({...data, location: e.target.value})} />
           </div>
         </div>
 
         <div className="bg-gray-50 p-4 rounded-2xl space-y-4 border border-gray-100">
           <h4 className="text-sm font-bold flex items-center gap-2"><Wallet size={16} /> 費用分攤</h4>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>金額</Label>
-              <Input type="number" value={data.cost || ""} onChange={e => setData({...data, cost: Number(e.target.value)})} placeholder="0" />
+            <div className="space-y-1.5">
+              <Label className="text-gray-500 text-xs">金額</Label>
+              <Input className="h-12 rounded-xl border-gray-200" type="number" value={data.cost || ""} onChange={e => setData({...data, cost: Number(e.target.value)})} placeholder="0" />
             </div>
-            <div className="space-y-1">
-              <Label>幣別</Label>
-              <Input value={data.currency || "TWD"} onChange={e => setData({...data, currency: e.target.value})} />
+            <div className="space-y-1.5">
+              <Label className="text-gray-500 text-xs">幣別</Label>
+              <Input className="h-12 rounded-xl border-gray-200" value={data.currency || "TWD"} onChange={e => setData({...data, currency: e.target.value})} />
             </div>
           </div>
-          <div className="space-y-1">
-            <Label>付款人</Label>
-            <select className="w-full h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm" value={data.payer || members[0]} onChange={e => setData({...data, payer: e.target.value})}>
+          <div className="space-y-1.5">
+            <Label className="text-gray-500 text-xs">付款人</Label>
+            <select className="w-full h-12 rounded-xl border border-gray-200 bg-white px-3 text-sm" value={data.payer || members[0]} onChange={e => setData({...data, payer: e.target.value})}>
               {members.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <Label>分攤成員</Label>
+            <Label className="text-gray-500 text-xs">分攤成員</Label>
             <div className="flex flex-wrap gap-2">
               {members.map(person => {
                 const isSelected = (data.splitters || members).includes(person);
                 return (
-                  <button key={person} onClick={() => toggleSplitter(person, title.includes('編輯'))} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isSelected ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200'}`}>
-                    {person}
+                  <button key={person} onClick={() => toggleSplitter(person, title.includes('編輯'))} className={`px-4 py-2 rounded-full text-xs font-medium border transition-all ${isSelected ? 'bg-black text-white border-black' : 'bg-white text-gray-500 border-gray-200'}`}>
+                    {person} {isSelected && <Check size={12} className="inline ml-1" />}
                   </button>
                 )
               })}
@@ -173,10 +173,27 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
           </div>
         </div>
 
-        <div className="space-y-1">
-          <Label>備註</Label>
-          <Textarea className="min-h-[100px]" placeholder="紀錄重要資訊..." value={data.notes || ""} onChange={e => setData({...data, notes: e.target.value})} />
+        <div className="space-y-1.5">
+          <Label className="text-gray-500 text-xs">備註</Label>
+          <Textarea className="min-h-[120px] rounded-2xl bg-gray-50 border-none" placeholder="輸入行程備註..." value={data.notes || ""} onChange={e => setData({...data, notes: e.target.value})} />
         </div>
+
+        {/* 刪除按鈕 - 只在編輯模式出現 */}
+        {title.includes('編輯') && (
+          <div className="pt-6">
+            <button 
+              onClick={() => {
+                if (window.confirm("確定要刪除此行程嗎？")) {
+                  onDelete?.(data.id!);
+                  setEditingItem(null);
+                }
+              }}
+              className="w-full py-4 rounded-2xl bg-red-50 text-red-600 font-bold text-sm border border-red-100 active:bg-red-100 flex items-center justify-center gap-2"
+            >
+              <Trash2 size={16} /> 刪除此行程
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -186,14 +203,13 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
       <div className="px-4 flex items-end justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">最近行程</h2>
-          <p className="text-xs text-gray-500 mt-1">{items[0]?.date || "尚未有行程"}</p>
+          <p className="text-xs text-gray-500 mt-1">{items[0]?.date || "尚未建立行程"}</p>
         </div>
-        <button onClick={() => setIsAdding(true)} className="text-xs text-white flex items-center gap-1 font-medium bg-black px-3 py-1.5 rounded-md shadow-sm">
+        <button onClick={() => setIsAdding(true)} className="text-xs text-white flex items-center gap-1 font-medium bg-black px-3 py-1.5 rounded-md active:scale-95 transition-transform shadow-sm">
           <Plus size={12} /> 新增
         </button>
       </div>
 
-      {/* 列表區 */}
       <div className="flex gap-4 overflow-x-auto px-4 pb-4 snap-x snap-mandatory hide-scrollbar">
         {items.map((item) => (
           <Drawer key={item.id}>
@@ -202,34 +218,46 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                 <img src={item.image} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute bottom-0 p-4 text-white">
-                  <p className="text-xs opacity-90 flex items-center gap-1"><Clock size={10} /> {item.time}</p>
+                  <p className="text-[10px] opacity-80 flex items-center gap-1 font-medium uppercase tracking-wider"><Clock size={10} /> {item.time}</p>
                   <h3 className="text-base font-bold leading-tight mt-1">{item.title}</h3>
                 </div>
               </div>
             </DrawerTrigger>
             <DrawerContent className="max-h-[85vh]">
-                {/* 詳情模式：保持 Drawer 用於「查看」，因為內容較少 */}
                 <div className="mx-auto w-full max-w-md p-4 space-y-6 pb-12 overflow-y-auto">
                     <div className="flex justify-between items-start">
-                        <DrawerTitle className="text-2xl font-bold">{item.title}</DrawerTitle>
-                        <Button size="sm" variant="outline" onClick={() => setEditingItem(item)}>編輯</Button>
+                        <div>
+                          <DrawerTitle className="text-2xl font-bold">{item.title}</DrawerTitle>
+                          <DrawerDescription className="text-gray-500 mt-1">{item.date} {item.time}</DrawerDescription>
+                        </div>
+                        <Button size="sm" variant="outline" className="rounded-full px-4" onClick={() => setEditingItem(item)}>編輯</Button>
                     </div>
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Clock size={16} /> {item.date} {item.time}
+                    <div className="space-y-5">
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><MapPin size={18} /></div>
+                            <div>
+                                <p className="text-sm font-bold">{item.location}</p>
+                                <p className="text-xs text-gray-400">{item.address || "無詳細地址"}</p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <MapPin size={16} /> {item.location}
+                        <div className="p-4 bg-yellow-50/50 rounded-2xl border border-yellow-100">
+                            <div className="flex items-center gap-2 text-yellow-700 font-bold text-xs mb-2">
+                                <StickyNote size={14} /> 備註事項
+                            </div>
+                            <p className="text-sm text-yellow-900 leading-relaxed">{item.notes || "目前沒有備註"}</p>
                         </div>
-                        <div className="p-4 bg-yellow-50 rounded-xl text-sm border border-yellow-100">
-                            {item.notes || "無備註事項"}
-                        </div>
-                        <div className="p-4 bg-gray-50 rounded-xl flex justify-between items-center">
-                            <span className="font-bold">{item.cost?.toLocaleString()} {item.currency}</span>
-                            <span className="text-xs text-gray-500">由 {item.payer} 付款</span>
+                        <div className="p-4 bg-gray-50 rounded-2xl">
+                            <div className="flex justify-between items-end mb-1">
+                                <span className="text-xs text-gray-500 font-medium uppercase tracking-widest">實際花費</span>
+                                <span className="text-2xl font-black">{item.cost?.toLocaleString()} <span className="text-sm">{item.currency}</span></span>
+                            </div>
+                            <div className="pt-3 border-t border-gray-200 mt-3 flex justify-between items-center text-xs">
+                                <span className="text-gray-400">付款人：<span className="text-gray-900 font-bold">{item.payer}</span></span>
+                                <span className="text-gray-400">分攤：<span className="text-gray-900 font-bold">{item.splitters?.length} 人</span></span>
+                            </div>
                         </div>
                     </div>
-                    <DrawerClose asChild><Button className="w-full">關閉</Button></DrawerClose>
+                    <DrawerClose asChild><Button className="w-full h-12 rounded-xl text-gray-500" variant="ghost">關閉視窗</Button></DrawerClose>
                 </div>
             </DrawerContent>
           </Drawer>
@@ -237,13 +265,10 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
       </div>
 
       <div className="px-4">
-        <button onClick={onViewAll} className="w-full bg-gray-900 text-white py-3.5 rounded-xl text-sm font-medium">查看所有行程</button>
+        <button onClick={onViewAll} className="w-full bg-gray-900 text-white py-3.5 rounded-xl text-sm font-medium hover:bg-black transition-colors shadow-xl shadow-gray-200">查看所有行程</button>
       </div>
 
-      {/* 全螢幕新增頁面 */}
       {isAdding && renderForm(newItem, setNewItem, handleCreate, () => setIsAdding(false), "新增行程")}
-
-      {/* 全螢幕編輯頁面 */}
       {editingItem && renderForm(editingItem, setEditingItem, () => { onUpdate?.(editingItem); setEditingItem(null); }, () => setEditingItem(null), "編輯行程")}
     </div>
   );
