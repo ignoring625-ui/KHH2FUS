@@ -33,7 +33,6 @@ export default function App() {
 
   // ================= 核心同步邏輯 =================
   useEffect(() => {
-    // 監聽雲端，只要資料一變，這裡就會觸發
     const unsubscribe = listenToCloud((cloudData) => {
       console.log("收到雲端同步資料:", cloudData);
       if (cloudData.members) setMembers(cloudData.members);
@@ -45,7 +44,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 封裝一個統一的更新函式，同時改本地和雲端
   const syncAndSetMembers = (newMembers: MemberProfile[]) => {
     setMembers(newMembers);
     saveToCloud({ members: newMembers });
@@ -140,13 +138,23 @@ export default function App() {
 
   const memberNames = members.map(m => m.name);
   const totalExpenses = itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0);
-  const todayDate = "2026-03-06";
-  const todayItems = itineraryItems.filter(item => item.date === todayDate);
+
+  // --- 修改：今日行程判定與排序 ---
+  const todayDate = new Date().toLocaleDateString('en-CA'); // 產出 YYYY-MM-DD
+  const todayItems = itineraryItems
+    .filter(item => item.date === todayDate)
+    .sort((a, b) => {
+      const timeA = a.time.split(' - ')[0];
+      const timeB = b.time.split(' - ')[0];
+      return timeA.localeCompare(timeB);
+    });
+  // ----------------------------
+
   const foodItems = recommendationItems.filter(item => item.category === 'food').slice(0, 2);
   const shoppingItems = recommendationItems.filter(item => item.category === 'shopping').slice(0, 2);
 
   const renderContent = () => {
-    if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} members={memberNames} />;
+    if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} members={memberNames} />;
     if (currentView === 'expenses') return <ExpenseSplitter items={itineraryItems} onBack={() => setCurrentView('home')} members={memberNames} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} rates={EXCHANGE_RATES} />;
     if (currentView === 'all-tickets') return <AllTickets items={ticketItems} onBack={() => setCurrentView('home')} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} members={members} />;
     if (currentView === 'all-recommendations') return <AllRecommendations items={recommendationItems} onBack={() => setCurrentView('home')} onUpdate={handleRecommendationUpdate} onAdd={handleRecommendationAdd} />;
@@ -167,7 +175,14 @@ export default function App() {
 
         <main className="max-w-md mx-auto py-6 space-y-8">
           <ExchangeRate rates={EXCHANGE_RATES} />
-          <Itinerary items={todayItems} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onViewAll={() => setCurrentView('all-itineraries')} members={memberNames} />
+          <Itinerary 
+            items={todayItems} 
+            onUpdate={handleItineraryUpdate} 
+            onAdd={handleItineraryAdd} 
+            onDelete={handleItineraryDelete} // 補上刪除功能
+            onViewAll={() => setCurrentView('all-itineraries')} 
+            members={memberNames} 
+          />
           <TicketList items={ticketItems} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} onViewAll={() => setCurrentView('all-tickets')} />
           <RecommendationSection title="美食清單" subtitle="想要造訪的餐廳" items={foodItems} onViewAll={() => setCurrentView('all-recommendations')} />
           <RecommendationSection title="購物清單" subtitle="想要購買的伴手禮" items={shoppingItems} onViewAll={() => setCurrentView('all-recommendations')} />
