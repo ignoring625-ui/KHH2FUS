@@ -116,8 +116,10 @@ export default function App() {
     syncAndSetItinerary([...itineraryItems, newItem]);
   };
   
+  // 修改：實作刪除邏輯並同步至雲端
   const handleItineraryDelete = (id: string) => {
-    syncAndSetItinerary(itineraryItems.filter(item => item.id !== id));
+    const updatedItems = itineraryItems.filter(item => item.id !== id);
+    syncAndSetItinerary(updatedItems);
   };
 
   const handleTicketUpdate = (updatedItem: TicketItemData) => {
@@ -139,8 +141,8 @@ export default function App() {
   const memberNames = members.map(m => m.name);
   const totalExpenses = itineraryItems.reduce((sum, item) => sum + ((item.cost || 0) * (EXCHANGE_RATES[item.currency || 'TWD'] || 1)), 0);
 
-  // --- 修改：今日行程判定與排序 ---
-  const todayDate = new Date().toLocaleDateString('en-CA'); // 產出 YYYY-MM-DD
+  // --- 今日行程判定與排序 ---
+  const todayDate = new Date().toLocaleDateString('en-CA'); 
   const todayItems = itineraryItems
     .filter(item => item.date === todayDate)
     .sort((a, b) => {
@@ -148,12 +150,12 @@ export default function App() {
       const timeB = b.time.split(' - ')[0];
       return timeA.localeCompare(timeB);
     });
-  // ----------------------------
 
   const foodItems = recommendationItems.filter(item => item.category === 'food').slice(0, 2);
   const shoppingItems = recommendationItems.filter(item => item.category === 'shopping').slice(0, 2);
 
   const renderContent = () => {
+    // 確保所有子頁面都傳入了 onDelete
     if (currentView === 'all-itineraries') return <AllItineraries items={itineraryItems} onBack={() => setCurrentView('home')} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} members={memberNames} />;
     if (currentView === 'expenses') return <ExpenseSplitter items={itineraryItems} onBack={() => setCurrentView('home')} members={memberNames} onUpdate={handleItineraryUpdate} onAdd={handleItineraryAdd} onDelete={handleItineraryDelete} rates={EXCHANGE_RATES} />;
     if (currentView === 'all-tickets') return <AllTickets items={ticketItems} onBack={() => setCurrentView('home')} onUpdate={handleTicketUpdate} onAdd={handleTicketAdd} members={members} />;
@@ -166,20 +168,21 @@ export default function App() {
           <div className="flex gap-2">
             <button className="p-2 hover:bg-gray-100 rounded-full transition-colors"><Search size={20} className="text-gray-600" /></button>
             <button onClick={() => setIsProfileOpen(true)} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-               <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center overflow-hidden border border-gray-200">
-                  {members.find(m => m.isMe)?.avatar ? <img src={members.find(m => m.isMe)?.avatar} alt="Me" className="w-full h-full object-cover" /> : <UserCircle size={20} />}
-               </div>
+                <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center overflow-hidden border border-gray-200">
+                   {members.find(m => m.isMe)?.avatar ? <img src={members.find(m => m.isMe)?.avatar} alt="Me" className="w-full h-full object-cover" /> : <UserCircle size={20} />}
+                </div>
             </button>
           </div>
         </header>
 
         <main className="max-w-md mx-auto py-6 space-y-8">
           <ExchangeRate rates={EXCHANGE_RATES} />
+          {/* 首頁今日行程組件 */}
           <Itinerary 
             items={todayItems} 
             onUpdate={handleItineraryUpdate} 
             onAdd={handleItineraryAdd} 
-            onDelete={handleItineraryDelete} // 補上刪除功能
+            onDelete={handleItineraryDelete} 
             onViewAll={() => setCurrentView('all-itineraries')} 
             members={memberNames} 
           />
@@ -187,7 +190,7 @@ export default function App() {
           <RecommendationSection title="美食清單" subtitle="想要造訪的餐廳" items={foodItems} onViewAll={() => setCurrentView('all-recommendations')} />
           <RecommendationSection title="購物清單" subtitle="想要購買的伴手禮" items={shoppingItems} onViewAll={() => setCurrentView('all-recommendations')} />
           <div onClick={() => setCurrentView('expenses')} className="cursor-pointer transition-transform active:scale-[0.98]">
-             <Dashboard totalExpenses={totalExpenses} currency="TWD" />
+              <Dashboard totalExpenses={totalExpenses} currency="TWD" />
           </div>
         </main>
       </div>
@@ -197,7 +200,14 @@ export default function App() {
   return (
     <>
       {renderContent()}
-      <ProfileSettings isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} members={members} onUpdateMember={handleUpdateMember} onAddMember={handleAddMember} onRemoveMember={handleRemoveMember} />
+      <ProfileSettings 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+        members={members} 
+        onUpdateMember={handleUpdateMember} 
+        onAddMember={handleAddMember} 
+        onRemoveMember={handleRemoveMember} 
+      />
       <BottomNav currentTab={currentView} onTabChange={(tab) => setCurrentView(tab)} />
     </>
   );
