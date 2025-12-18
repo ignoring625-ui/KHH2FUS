@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, RefreshCw, Clock, StickyNote, Wallet, Navigation, Plus, Save, X, Users, Check } from "lucide-react";
+import { MapPin, RefreshCw, Clock, StickyNote, Wallet, Navigation, Plus, Save, X, Users, Check, Camera } from "lucide-react";
 import {
   Drawer,
   DrawerClose,
@@ -47,10 +47,26 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
   const [isAdding, setIsAdding] = useState(false);
   const [newItem, setNewItem] = useState<Partial<ItineraryItemData>>({});
 
+  // 處理圖片上傳
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, mode: 'add' | 'edit') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (mode === 'add') {
+          setNewItem({ ...newItem, image: base64String });
+        } else if (editingItem) {
+          setEditingItem({ ...editingItem, image: base64String });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleEdit = (item: ItineraryItemData) => {
     setEditingItem({ 
       ...item,
-      // Ensure arrays are initialized
       splitters: item.splitters || members
     });
   };
@@ -86,7 +102,8 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
     if (onAdd) {
       const item: ItineraryItemData = {
         id: Math.random().toString(36).substr(2, 9),
-        image: "https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&q=80&w=1000", // Default image
+        // 若無上傳圖片，使用系統預設圖
+        image: newItem.image || "https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&q=80&w=1000",
         date: newItem.date || new Date().toISOString().split('T')[0],
         time: newItem.time || "00:00",
         title: newItem.title || "新行程",
@@ -110,7 +127,7 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
       <div className="px-4 flex items-end justify-between">
         <div>
           <h2 className="text-lg font-bold text-gray-900">最近行程</h2>
-          <p className="text-xs text-gray-500 mt-1">{items[0]?.date || "2026/03/06"} (星期五) 12:30</p>
+          <p className="text-xs text-gray-500 mt-1">{items[0]?.date || "尚未有行程"}</p>
         </div>
         <div className="flex gap-2">
           <Drawer open={isAdding} onOpenChange={setIsAdding}>
@@ -125,6 +142,25 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                   <DrawerTitle>新增行程</DrawerTitle>
                   <DrawerDescription>輸入新行程的詳細資訊</DrawerDescription>
                 </DrawerHeader>
+                
+                {/* 圖片上傳區塊 */}
+                <div className="relative w-full h-40 bg-gray-100 rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2">
+                  {newItem.image ? (
+                    <img src={newItem.image} className="w-full h-full object-cover" alt="Preview" />
+                  ) : (
+                    <>
+                      <Camera className="text-gray-400" size={24} />
+                      <span className="text-xs text-gray-400 font-medium">點擊上傳封面照片</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="absolute inset-0 opacity-0 cursor-pointer" 
+                    onChange={(e) => handleImageChange(e, 'add')} 
+                  />
+                </div>
+
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label>標題</Label>
@@ -161,7 +197,6 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                     </div>
                   </div>
                   
-                  {/* Expense Section */}
                   <div className="bg-gray-50 p-3 rounded-xl space-y-3 border border-gray-100">
                     <h4 className="text-sm font-bold flex items-center gap-2">
                        <Wallet size={14} /> 實際花費
@@ -244,7 +279,7 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
         {items.map((item) => (
           <Drawer key={item.id} onClose={() => setEditingItem(null)}>
             <DrawerTrigger asChild>
-              <div className="relative shrink-0 w-[200px] h-[300px] rounded-2xl overflow-hidden group snap-start cursor-pointer active:scale-95 transition-all">
+              <div className="relative shrink-0 w-[200px] h-[300px] rounded-2xl overflow-hidden group snap-start cursor-pointer active:scale-95 transition-all shadow-md">
                 <img
                   src={item.image}
                   alt={item.title}
@@ -277,12 +312,23 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
             <DrawerContent className="max-h-[90vh]">
               <div className="mx-auto w-full max-w-md">
                 {editingItem && editingItem.id === item.id ? (
-                  // Edit Mode
                   <div className="p-4 space-y-4 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-bold">編輯行程</h3>
-                    </div>
+                    <h3 className="text-lg font-bold">編輯行程</h3>
                     
+                    {/* 編輯圖片區塊 */}
+                    <div className="relative w-full h-40 bg-gray-100 rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2">
+                      <img src={editingItem.image} className="w-full h-full object-cover" alt="Preview" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <Camera className="text-white" size={24} />
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        onChange={(e) => handleImageChange(e, 'edit')} 
+                      />
+                    </div>
+
                     <div className="space-y-3">
                       <div className="space-y-1">
                         <Label>標題</Label>
@@ -292,7 +338,6 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                         />
                       </div>
                       
-                      {/* Expense Edit Section */}
                        <div className="bg-gray-50 p-3 rounded-xl space-y-3 border border-gray-100">
                         <h4 className="text-sm font-bold flex items-center gap-2">
                            <Wallet size={14} /> 實際花費
@@ -363,14 +408,13 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                     </div>
                   </div>
                 ) : (
-                  // View Mode
                   <>
                     <div className="relative h-48 w-full shrink-0">
                       <img src={item.image} className="w-full h-full object-cover rounded-t-[10px]" alt={item.title} />
                       <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                        <div>
-                          <DrawerTitle className="text-2xl font-bold">{item.title}</DrawerTitle>
+                        <div className="max-w-[70%]">
+                          <DrawerTitle className="text-2xl font-bold truncate">{item.title}</DrawerTitle>
                           <DrawerDescription className="text-muted-foreground flex items-center gap-2 mt-1">
                             <Clock size={14} /> {item.time} ({item.date})
                           </DrawerDescription>
@@ -382,7 +426,6 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                     </div>
                     
                     <div className="p-4 space-y-6 overflow-y-auto">
-                      {/* Location */}
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <MapPin size={16} /> 地點
@@ -392,13 +435,12 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                             <p className="font-medium text-foreground">{item.location}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{item.address}</p>
                           </div>
-                          <Button size="icon" variant="outline" className="shrink-0 h-8 w-8 rounded-full" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address)}`, '_blank')}>
+                          <Button size="icon" variant="outline" className="shrink-0 h-8 w-8 rounded-full" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address || item.location)}`, '_blank')}>
                             <Navigation size={14} />
                           </Button>
                         </div>
                       </div>
 
-                      {/* Notes */}
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <StickyNote size={16} /> 備註
@@ -408,7 +450,6 @@ export function Itinerary({ items, onUpdate, onAdd, onViewAll, members = ["我",
                         </div>
                       </div>
 
-                      {/* Cost */}
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <Wallet size={16} /> 實際花費
